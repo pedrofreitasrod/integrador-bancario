@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<metadados xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:noNamespaceSchemaLocation="../.gradle/metadados.xsd">
+
+    <!--
+        Para mais informações sobre a criação e utilização do Menu,
+        consulte a documentação oficial da Sankhya em: https://developer.sankhya.com.br/docs/06_menu
+    -->
+
+    <menu id="integradorhero1" description="Hero1 - Integrador Bancário" icon="/$ctx/assets/icon.png">
+
+
+        <folder id="integradorbancario" description="Hero1 - Integrador Bancário">
+            <ui id="BcoCadastroBanco"
+                resourceId="BcoCadastroBanco"
+                url="/$ctx/BcoCadastroBanco.xhtml5"
+                description="Hero1 - Cadastro de Bancos"/>
+
+            <dynamicForm instance="BcoCadCredencial"
+                         id="BcoCadCredencial"
+                         description="Hero1 - Credenciais das APIs dos Bancos"/>
+
+            <ui id="BcoRespBanco"
+                resourceId="BcoRespBanco"
+                url="/$ctx/BcoRespBanco.xhtml5"
+                description="Hero1 - Respostas das APIs dos Bancos"/>
+        </folder>
+
+    </menu>
+</metadados>

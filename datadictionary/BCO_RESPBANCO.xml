@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<metadados xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:noNamespaceSchemaLocation="../.gradle/metadados.xsd">
+
+    <table name="BCO_RESPBANCO" sequenceType="M">
+        <description>Respostas recebidas das APIs dos bancos</description>
+        <primaryKey>
+            <field name="IDFINANCEIRO"/>
+            <field name="IDBANCO"/>
+            <field name="CODEMP"/>
+            <field name="TIPORESP"/>
+        </primaryKey>
+        <instances>
+            <instance name="BcoRespBanco">
+                <description>Respostas recebidas das APIs dos bancos</description>
+            </instance>
+        </instances>
+        <fields>
+            <field name="IDFINANCEIRO" dataType="TEXTO" size="60" nullable="N" required="S"
+                   readOnly="S" allowSearch="S" visibleOnSearch="S">
+                <description>Id Financeiro (retorno da API)</description>
+            </field>
+            <field name="IDBANCO" dataType="PESQUISA" targetInstance="BcoCadBanco" targetField="ID" targetType="INTEIRO"
+                   nullable="N" required="S" readOnly="S" allowSearch="S" visibleOnSearch="S">
+                <description>Banco</description>
+            </field>
+            <field name="CODEMP" dataType="PESQUISA" targetInstance="Empresa" targetField="CODEMP" targetType="INTEIRO"
+                   nullable="N" required="S" readOnly="S" allowSearch="S" visibleOnSearch="S">
+                <description>Empresa</description>
+            </field>
+            <field name="TIPORESP" dataType="LISTA" size="10" nullable="N" required="S"
+                   readOnly="S" allowSearch="S" visibleOnSearch="S">
+                <description>Tipo de Resposta</description>
+                <fieldOptions>
+                    <option value="DDA">DDA - Débito Direto Autorizado</option>
+                </fieldOptions>
+            </field>
+            <field name="CNPJBENEF" dataType="TEXTO" size="14"
+                   readOnly="S" allowSearch="S" visibleOnSearch="S">
+                <description>CNPJ do Beneficiário</description>
+            </field>
+            <field name="DTVENCIMENTO" dataType="DATA"
+                   readOnly="S" allowSearch="S" visibleOnSearch="S">
+                <description>Data de Vencimento</description>
+            </field>
+            <field name="VALOR" dataType="DECIMAL" nuCasasDecimais="2"
+                   readOnly="S" allowSearch="S" visibleOnSearch="S">
+                <description>Valor</description>
+            </field>
+            <field name="DTNEGOCIACAO" dataType="DATA"
+                   readOnly="S" allowSearch="S" visibleOnSearch="S">
+                <description>Data de Negociação</description>
+            </field>
+            <field name="NOSSONUMERO" dataType="TEXTO" size="20"
+                   readOnly="S" allowSearch="S" visibleOnSearch="S">
+                <description>Nosso Número</description>
+            </field>
+            <field name="DTINSERCAO" dataType="DATA_HORA"
+                   readOnly="S" allowSearch="S" visibleOnSearch="S">
+                <description>Data de Inserção</description>
+            </field>
+            <field name="DTPROCESSAMENTO" dataType="DATA_HORA"
+                   allowSearch="S" visibleOnSearch="S">
+                <description>Data de Processamento</description>
+            </field>
+            <field name="PROCESSADO" dataType="CHECKBOX"
+                   allowSearch="S" visibleOnSearch="S">
+                <description>Processado</description>
+            </field>
+            <field name="NUFIN" dataType="DECIMAL" nuCasasDecimais="0"
+                   allowSearch="S" visibleOnSearch="S">
+                <description>Nº Único do Financeiro (TGFFIN)</description>
+            </field>
+        </fields>
+    </table>
+
+</metadados>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<metadados xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:noNamespaceSchemaLocation="../.gradle/metadados.xsd">
+
+    <table name="BCO_CADBANCO" sequenceType="A" sequenceField="ID">
+        <description>Cadastro de Bancos</description>
+        <primaryKey>
+            <field name="ID"/>
+        </primaryKey>
+        <instances>
+            <instance name="BcoCadBanco">
+                <description>Cadastro de Bancos</description>
+            </instance>
+        </instances>
+        <fields>
+            <field name="ID" dataType="INTEIRO" allowSearch="S" visibleOnSearch="S">
+                <description>ID</description>
+                <properties>
+                    <prop name="readOnly">S</prop>
+                    <prop name="UITabName">__main</prop>
+                </properties>
+            </field>
+            <field name="NOMEBANCO" dataType="TEXTO" size="100" required="S" nullable="N"
+                   allowSearch="S" visibleOnSearch="S">
+                <description>Nome do Banco</description>
+                <properties>
+                    <prop name="readOnly">S</prop>
+                    <prop name="UITabName">__main</prop>
+                </properties>
+            </field>
+            <field name="CODIGODOBANCO" dataType="INTEIRO" allowSearch="S" visibleOnSearch="S">
+                <description>Código de Compensação</description>
+                <properties>
+                    <prop name="readOnly">S</prop>
+                    <prop name="UITabName">__main</prop>
+                </properties>
+            </field>
+            <field name="SANDBOX" dataType="CHECKBOX" allowSearch="S" visibleOnSearch="S">
+                <description>Sandbox</description>
+                <properties>
+                    <prop name="UITabName">__main</prop>
+                </properties>
+            </field>
+        </fields>
+    </table>
+
+</metadados>

@@ -1,0 +1,8 @@
+<sk-application ng-controller="BcoCadastroBancoController as ctrl" creation-complete="ctrl.init()">
+    <sk-dynaform sk-entity-name="BcoCadBanco"
+                 sk-on-dynaform-loaded="ctrl.onDynaformLoaded(dynaform, dataset)"
+                 sk-edit-unique-record="true"
+                 sk-skip-start-page="true"
+                 sk-can-back-to-old-layout="true"
+                 flex></sk-dynaform>
+</sk-application>

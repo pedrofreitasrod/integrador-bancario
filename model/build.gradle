@@ -1,0 +1,21 @@
+
+// Torna os jars de `moduleLib` visiveis para compilacao/IDE sem alterar o
+// empacotamento (o plugin do studio continua sendo quem empacota `moduleLib`).
+// Sem isto, o IntelliJ marca as libs de `moduleLib` como nao resolvidas.
+configurations.compileOnly.extendsFrom(configurations.moduleLib)
+
+dependencies {
+
+    compileOnly 'org.projectlombok:lombok:1.18.24'
+    annotationProcessor 'org.projectlombok:lombok:1.18.24'
+
+    // Integracao HTTP com bancos: HttpURLConnection (JDK) + Moshi so para o JSON.
+    // Ver override em CLAUDE.md — Retrofit/OkHttp NAO sao usados neste projeto.
+    moduleLib 'com.squareup.moshi:moshi:1.15.2'
+    moduleLib 'com.squareup.moshi:moshi-kotlin:1.15.2'
+    moduleLib 'org.jetbrains.kotlin:kotlin-reflect:2.0.0'
+
+}
+test {
+    useJUnitPlatform()
+}

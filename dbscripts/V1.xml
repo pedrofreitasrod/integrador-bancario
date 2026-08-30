@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<scripts xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="../.gradle/scripts.xsd">
+
+    <!--
+        Seed do cadastro de bancos (BCO_CADBANCO).
+        A tabela e criada pelo Auto DDL a partir de datadictionary/BCO_CADBANCO.xml,
+        portanto este script contem apenas INSERTs de dados de configuracao.
+        Idempotente: PK (ID) derivada de MAX(ID)+1 e existencia testada pela
+        chave de negocio CODIGODOBANCO (codigo de compensacao).
+    -->
+
+    <sql nomeTabela="BCO_CADBANCO" ordem="1" executar="SEMPRE"
+         tipoObjeto="TABLE" nomeObjeto="SEED_BCO_CADBANCO_756"
+         descricao="Seed banco Sicoob (756)">
+        <mssql>
+            INSERT INTO BCO_CADBANCO (ID, NOMEBANCO, CODIGODOBANCO, SANDBOX)
+            SELECT COALESCE(MAX(ID), 0) + 1, 'Sicoob', 756, 'S'
+            FROM BCO_CADBANCO
+            WHERE NOT EXISTS (SELECT 1 FROM BCO_CADBANCO WHERE CODIGODOBANCO = 756)
+        </mssql>
+        <oracle>
+            INSERT INTO BCO_CADBANCO (ID, NOMEBANCO, CODIGODOBANCO, SANDBOX)
+            SELECT NVL(MAX(ID), 0) + 1, 'Sicoob', 756, 'S'
+            FROM BCO_CADBANCO
+            WHERE NOT EXISTS (SELECT 1 FROM BCO_CADBANCO WHERE CODIGODOBANCO = 756)
+        </oracle>
+    </sql>
+
+
+
+</scripts>

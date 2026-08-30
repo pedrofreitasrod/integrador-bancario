@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE parameters >
+<parameters group-name="mge.:name" data-source="br.com.sankhya.modelcore.util.MGECoreParameter" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:noNamespaceSchemaLocation="../../../../../.gradle/parameters.xsd">
+
+    <!--
+        Para mais informações sobre a criação e utilização de Parâmetros,
+        consulte a documentação oficial da Sankhya em: https://developer.sankhya.com.br/docs/03_parameter
+    -->
+    <!-- Bypass do job de DDA: "false" desliga o BuscarDdaJob sem redeploy. -->
+    <parameter name="br.com.parameter.heroone.integrador"
+               key="PBCODDAJOB"
+               type="boolean"
+               default="true"
+               cacheable="false"
+               required="false"
+               module="B"
+               description="Integrador Bancario: job de busca de DDA ativo"/>
+</parameters>

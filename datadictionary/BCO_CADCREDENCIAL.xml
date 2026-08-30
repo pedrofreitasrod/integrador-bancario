@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<metadados xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:noNamespaceSchemaLocation="../.gradle/metadados.xsd">
+
+    <table name="BCO_CADCREDENCIAL" sequenceType="M">
+        <description>Credenciais de acesso às APIs dos bancos por empresa</description>
+        <primaryKey>
+            <field name="IDBANCO"/>
+            <field name="CODEMP"/>
+        </primaryKey>
+        <instances>
+            <instance name="BcoCadCredencial">
+                <description>Credenciais de acesso às APIs dos bancos por empresa</description>
+            </instance>
+        </instances>
+        <fields>
+            <field name="IDBANCO" dataType="PESQUISA" targetInstance="BcoCadBanco" targetField="ID" targetType="INTEIRO"
+                   nullable="N" required="S" allowSearch="S" visibleOnSearch="S">
+                <description>Banco</description>
+            </field>
+            <field name="CODEMP" dataType="PESQUISA" targetInstance="Empresa" targetField="CODEMP" targetType="INTEIRO"
+                   nullable="N" required="S" allowSearch="S" visibleOnSearch="S">
+                <description>Empresa</description>
+            </field>
+            <field name="CLIENTID" dataType="TEXTO" size="120"
+                   allowSearch="S" visibleOnSearch="S">
+                <description>Client ID (OAuth)</description>
+            </field>
+            <field name="COOPERATIVA" dataType="TEXTO" size="10"
+                   allowSearch="S" visibleOnSearch="S">
+                <description>Cooperativa / Agência</description>
+            </field>
+            <field name="NUMCONTA" dataType="TEXTO" size="20"
+                   allowSearch="S" visibleOnSearch="S">
+                <description>Número da Conta</description>
+            </field>
+            <field name="NUMCONTRATO" dataType="TEXTO" size="20"
+                   allowSearch="S" visibleOnSearch="S">
+                <description>Número do Contrato (cobrança)</description>
+            </field>
+            <field name="CERTARQUIVO" dataType="TEXTO" size="255"
+                   allowSearch="N" visibleOnSearch="N">
+                <description>Caminho do certificado .pfx no servidor</description>
+            </field>
+            <field name="CERTSENHA" dataType="TEXTO" size="255"
+                   allowSearch="N" visibleOnSearch="N">
+                <description>Senha do certificado</description>
+            </field>
+            <field name="SCOPES" dataType="TEXTO" size="500"
+                   allowSearch="N" visibleOnSearch="N">
+                <description>Escopos OAuth (separados por espaço)</description>
+            </field>
+            <field name="ATIVO" dataType="CHECKBOX"
+                   allowSearch="S" visibleOnSearch="S">
+                <description>Ativo</description>
+            </field>
+        </fields>
+    </table>
+
+</metadados>
