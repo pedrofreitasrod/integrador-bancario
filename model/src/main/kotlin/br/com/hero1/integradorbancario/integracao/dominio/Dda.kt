@@ -22,4 +22,10 @@ data class Dda(
     val valor: BigDecimal? = null,
     val dataNegociacao: LocalDate? = null,
     val nossoNumero: String? = null,
+    /**
+     * Codigo de barras / linha digitavel do titulo, quando o banco fornece.
+     * E o que a rotina de pagamento usa como chave do boleto. Normalmente igual
+     * a [idFinanceiro].
+     */
+    val codigoBarras: String? = null,
 )

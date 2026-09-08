@@ -1,6 +1,6 @@
 package br.com.hero1.integradorbancario.integracao
 
-import br.com.hero1.integradorbancario.entity.BcoCadCredencial
+import br.com.hero1.integradorbancario.entity.BcoParamBanco
 import br.com.hero1.integradorbancario.entity.BcoRespBanco
 import br.com.hero1.integradorbancario.entity.BcoRespBancoId
 import br.com.hero1.integradorbancario.entity.TipoRespostaEnum
@@ -8,7 +8,6 @@ import br.com.hero1.integradorbancario.integracao.dominio.Dda
 import br.com.hero1.integradorbancario.integracao.dominio.FiltroDda
 import java.sql.Timestamp
 import java.time.LocalDate
-import java.util.logging.Level
 import java.util.logging.Logger
 
 /**
@@ -49,21 +48,26 @@ class BuscarDdaService(
         val credenciais = dao.credenciaisAtivasPorEmpresa(codEmp)
         if (credenciais.isEmpty()) {
             throw IntegracaoBancariaException(
-                "Empresa $codEmp nao tem credencial de banco ativa em BCO_CADCREDENCIAL",
+                "Empresa $codEmp nao tem credencial de banco ativa em BCO_PARAMBANCO",
             )
         }
         return credenciais.map { executarSeguro(it, dataInicio, dataFim) }
     }
 
     private fun executarSeguro(
-        credencial: BcoCadCredencial,
+        credencial: BcoParamBanco,
         dataInicio: LocalDate,
         dataFim: LocalDate,
     ): ResultadoBuscaDda =
         try {
             executar(credencial, dataInicio, dataFim)
         } catch (e: Exception) {
-            log.log(Level.SEVERE, "Falha ao buscar DDA (credencial ${credencial.id}): ${e.message}", e)
+            LogHelper(credencial.codEmp()).registrarAsync(
+                LogHelper.Status.ERROR,
+                "Falha ao buscar DDA (banco ${credencial.idBanco()})",
+                e,
+                ORIGEM,
+            )
             ResultadoBuscaDda(
                 codEmp = credencial.codEmp() ?: 0,
                 idBanco = credencial.idBanco() ?: 0,
@@ -74,7 +78,7 @@ class BuscarDdaService(
         }
 
     private fun executar(
-        credencial: BcoCadCredencial,
+        credencial: BcoParamBanco,
         dataInicio: LocalDate,
         dataFim: LocalDate,
     ): ResultadoBuscaDda {
@@ -102,7 +106,11 @@ class BuscarDdaService(
             if (armazenar(dda, idBanco, codEmp)) gravados++
         }
 
-        log.info("DDA banco=$codigoCompensacao empresa=$codEmp: ${ddas.size} consultados, $gravados novos.")
+        LogHelper(codEmp).registrar(
+            LogHelper.Status.INFO,
+            "Busca de DDA (banco $codigoCompensacao): ${ddas.size} consultados, $gravados novos.",
+            origem = ORIGEM,
+        )
         return ResultadoBuscaDda(codEmp, idBanco, ddas.size, gravados)
     }
 
@@ -120,8 +128,14 @@ class BuscarDdaService(
             nossoNumero = dda.nossoNumero
             dataInsercao = Timestamp(System.currentTimeMillis())
             processado = false
+            // Matching automatico: tenta vincular a um titulo a pagar em aberto.
+            nufin = dao.acharNufinAberto(codEmp, dda.cnpjBeneficiario, dda.valor, dda.dataVencimento)
         }
         dao.inserirResposta(registro)
         return true
+    }
+
+    private companion object {
+        const val ORIGEM = "BuscarDdaService"
     }
 }

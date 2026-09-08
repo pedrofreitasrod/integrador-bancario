@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<metadados xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:noNamespaceSchemaLocation="../.gradle/metadados.xsd">
+
+    <table name="BCO_LOG" sequenceType="A" sequenceField="NULOG">
+        <description>Log do integrador bancário</description>
+        <primaryKey>
+            <field name="NULOG"/>
+        </primaryKey>
+        <instances>
+            <instance name="BcoLog">
+                <description>Log do integrador bancário</description>
+                <relationShip>
+                    <relation entityName="Empresa">
+                        <fields>
+                            <field localName="CODEMP" targetName="CODEMP"/>
+                        </fields>
+                    </relation>
+                </relationShip>
+            </instance>
+        </instances>
+        <fields>
+            <field name="NULOG" dataType="INTEIRO" readOnly="S" order="1"
+                   allowSearch="S" visibleOnSearch="S">
+                <description>Nro. Log</description>
+            </field>
+            <field name="DATA" dataType="DATA_HORA" readOnly="S" order="2"
+                   allowSearch="S" visibleOnSearch="S">
+                <description>Data / Hora</description>
+            </field>
+            <field name="STATUS" dataType="LISTA" size="10" readOnly="S" order="3"
+                   allowSearch="S" visibleOnSearch="S">
+                <description>Situação</description>
+                <fieldOptions>
+                    <option value="INFO">Informação</option>
+                    <option value="WARNING">Alerta</option>
+                    <option value="ERROR">Erro</option>
+                </fieldOptions>
+            </field>
+            <field name="CODEMP" dataType="INTEIRO" readOnly="S" order="4"
+                   allowSearch="S" visibleOnSearch="S">
+                <description>Empresa</description>
+            </field>
+            <field name="ORIGEM" dataType="TEXTO" size="120" readOnly="S" order="5"
+                   allowSearch="S" visibleOnSearch="S">
+                <description>Origem (rotina)</description>
+            </field>
+            <field name="MENSAGEM" dataType="TEXTO" size="500" readOnly="S" order="6"
+                   allowSearch="S" visibleOnSearch="S">
+                <description>Mensagem</description>
+            </field>
+            <field name="DETALHAMENTO" dataType="CAIXA_TEXTO" size="4000" readOnly="S" order="7"
+                   allowSearch="N" visibleOnSearch="N">
+                <description>Detalhamento (stack trace)</description>
+            </field>
+        </fields>
+    </table>
+
+</metadados>

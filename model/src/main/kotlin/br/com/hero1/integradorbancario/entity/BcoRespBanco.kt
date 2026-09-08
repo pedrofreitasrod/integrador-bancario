@@ -49,6 +49,23 @@ class BcoRespBanco {
     @Column(name = "NUFIN")
     var nufin: BigDecimal? = null
 
+    /** Id do pagamento no banco (retorno da API), para reconsulta de comprovante. */
+    @Column(name = "IDPAGAMENTO")
+    var idPagamento: String? = null
+
+    @Column(name = "AUTENTICACAO")
+    var autenticacao: String? = null
+
+    /** Situacao do pagamento (ex.: "Efetivado", "Agendado", "Rejeitado"). */
+    @Column(name = "SITUACAOPGTO")
+    var situacaoPagamento: String? = null
+
+    @Column(name = "VLRPAGO")
+    var valorPago: BigDecimal? = null
+
+    @Column(name = "DTPAGAMENTO")
+    var dataPagamento: Timestamp? = null
+
     /** Tipo de resposta (discriminador), que mora na PK ([BcoRespBancoId.tipoResposta]). */
     fun tipoResposta(): TipoRespostaEnum? = id?.tipoRespostaEnum()
 }

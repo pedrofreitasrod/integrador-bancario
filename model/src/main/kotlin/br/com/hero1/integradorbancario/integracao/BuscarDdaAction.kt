@@ -7,6 +7,7 @@ import br.com.sankhya.studio.annotations.hooks.Field
 import br.com.sankhya.studio.annotations.hooks.FieldType
 import br.com.sankhya.studio.annotations.hooks.Form
 import br.com.sankhya.studio.annotations.hooks.TransactionType
+import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.LocalDate
 
@@ -37,12 +38,14 @@ private const val PARAM_EMPRESA = "CODEMP"
                 label = "Vencimento - de",
                 type = FieldType.DATE,
                 required = true,
+                saveLast = true
             ),
             Field(
                 name = PARAM_DATA_FIM,
                 label = "Vencimento - ate",
                 type = FieldType.DATE,
                 required = true,
+                saveLast = true
             ),
             Field(
                 name = PARAM_EMPRESA,
@@ -50,6 +53,7 @@ private const val PARAM_EMPRESA = "CODEMP"
                 type = FieldType.SEARCH,
                 instance = "Empresa",
                 required = true,
+                saveLast = true
             ),
         ],
     ),
@@ -59,14 +63,18 @@ class BuscarDdaAction : AcaoRotinaJava {
     override fun doAction(contexto: ContextoAcao) {
         val inicio = dataParam(contexto, PARAM_DATA_INICIO)
         val fim = dataParam(contexto, PARAM_DATA_FIM)
-        val codEmp = (contexto.getParam(PARAM_EMPRESA) as? Number)?.toInt()
-            ?: throw IntegracaoBancariaException("Informe a empresa.")
+        var codEmp = contexto.getParam(PARAM_EMPRESA)
+        if(codEmp==null){
+            throw IntegracaoBancariaException("Informe a empresa.")
+        }
+        codEmp = BigDecimal(codEmp.toString()).toInt()
+
 
         if (fim.isBefore(inicio)) {
             throw IntegracaoBancariaException("A data final nao pode ser anterior a inicial.")
         }
 
-        val resultados = IntegracaoBancaria.buscarDdaService.buscarParaEmpresa(codEmp, inicio, fim)
+        val resultados = IntegracaoBancaria.buscarDdaService.buscarParaEmpresa(codEmp.toInt(), inicio, fim)
         val novos = resultados.sumOf { it.quantidadeGravada }
         val falhas = resultados.filter { !it.sucesso }
 

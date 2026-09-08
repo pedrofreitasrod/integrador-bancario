@@ -21,7 +21,7 @@
                 </properties>
             </field>
             <field name="NOMEBANCO" dataType="TEXTO" size="100" required="S" nullable="N"
-                   allowSearch="S" visibleOnSearch="S">
+                   allowSearch="S" visibleOnSearch="S" isPresentation="S">
                 <description>Nome do Banco</description>
                 <properties>
                     <prop name="readOnly">S</prop>

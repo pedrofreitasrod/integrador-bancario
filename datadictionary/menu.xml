@@ -16,14 +16,18 @@
                 url="/$ctx/BcoCadastroBanco.xhtml5"
                 description="Hero1 - Cadastro de Bancos"/>
 
-            <dynamicForm instance="BcoCadCredencial"
-                         id="BcoCadCredencial"
-                         description="Hero1 - Credenciais das APIs dos Bancos"/>
+            <dynamicForm instance="BcoParamBanco"
+                         id="BcoParamBanco"
+                         description="Hero1 - Parâmetros por Empresa"/>
 
             <ui id="BcoRespBanco"
                 resourceId="BcoRespBanco"
                 url="/$ctx/BcoRespBanco.xhtml5"
                 description="Hero1 - Respostas das APIs dos Bancos"/>
+
+            <dynamicForm instance="BcoLog"
+                         id="BcoLog"
+                         description="Hero1 - Log do Integrador"/>
         </folder>
 
     </menu>

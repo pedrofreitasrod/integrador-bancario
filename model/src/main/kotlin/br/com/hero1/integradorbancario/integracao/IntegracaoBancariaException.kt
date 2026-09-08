@@ -11,3 +11,7 @@ class AutenticacaoBancariaException(message: String, cause: Throwable? = null) :
 /** Falha ao consultar dados na API do banco (HTTP, rede, payload inesperado). */
 class ConsultaBancariaException(message: String, cause: Throwable? = null) :
     IntegracaoBancariaException(message, cause)
+
+/** Falha ao efetuar/agendar um pagamento na API do banco (recusa de negocio, HTTP). */
+class PagamentoBancarioException(message: String, cause: Throwable? = null) :
+    IntegracaoBancariaException(message, cause)

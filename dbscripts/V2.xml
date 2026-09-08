@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<scripts xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="../.gradle/scripts.xsd">
+
+    <!--
+        Renomeia BCO_CADCREDENCIAL -> BCO_PARAMBANCO.
+
+        A tabela passou a guardar tambem os parametros operacionais (CODCTA,
+        CODTIPOPER) alem das credenciais. As colunas novas sao criadas pelo
+        Auto DDL a partir de datadictionary/BCO_PARAMBANCO.xml; este script so
+        preserva os dados ja existentes renomeando a tabela antiga.
+
+        Idempotente: so renomeia se a antiga existir e a nova ainda nao.
+    -->
+
+    <sql nomeTabela="BCO_PARAMBANCO" ordem="1" executar="SEMPRE"
+         tipoObjeto="TABLE" nomeObjeto="RENAME_BCO_CADCREDENCIAL_PARAMBANCO"
+         descricao="Renomeia BCO_CADCREDENCIAL para BCO_PARAMBANCO">
+        <mssql>
+            IF OBJECT_ID('BCO_CADCREDENCIAL', 'U') IS NOT NULL
+               AND OBJECT_ID('BCO_PARAMBANCO', 'U') IS NULL
+            BEGIN
+                EXEC sp_rename 'BCO_CADCREDENCIAL', 'BCO_PARAMBANCO';
+            END
+        </mssql>
+        <oracle>
+            DECLARE
+                v_antiga NUMBER;
+                v_nova   NUMBER;
+            BEGIN
+                SELECT COUNT(*) INTO v_antiga FROM user_tables WHERE table_name = 'BCO_CADCREDENCIAL';
+                SELECT COUNT(*) INTO v_nova   FROM user_tables WHERE table_name = 'BCO_PARAMBANCO';
+                IF v_antiga = 1 AND v_nova = 0 THEN
+                    EXECUTE IMMEDIATE 'ALTER TABLE BCO_CADCREDENCIAL RENAME TO BCO_PARAMBANCO';
+                END IF;
+            END;
+        </oracle>
+    </sql>
+
+</scripts>

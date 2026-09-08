@@ -71,6 +71,26 @@
                    allowSearch="S" visibleOnSearch="S">
                 <description>Nº Único do Financeiro (TGFFIN)</description>
             </field>
+            <field name="IDPAGAMENTO" dataType="TEXTO" size="40"
+                   readOnly="S" allowSearch="S" visibleOnSearch="S">
+                <description>Id do Pagamento (banco)</description>
+            </field>
+            <field name="AUTENTICACAO" dataType="TEXTO" size="60"
+                   readOnly="S" allowSearch="S" visibleOnSearch="S">
+                <description>Autenticação do Pagamento</description>
+            </field>
+            <field name="SITUACAOPGTO" dataType="TEXTO" size="30"
+                   readOnly="S" allowSearch="S" visibleOnSearch="S">
+                <description>Situação do Pagamento</description>
+            </field>
+            <field name="VLRPAGO" dataType="DECIMAL" nuCasasDecimais="2"
+                   readOnly="S" allowSearch="S" visibleOnSearch="S">
+                <description>Valor Pago</description>
+            </field>
+            <field name="DTPAGAMENTO" dataType="DATA_HORA"
+                   readOnly="S" allowSearch="S" visibleOnSearch="S">
+                <description>Data do Pagamento</description>
+            </field>
         </fields>
     </table>
 
