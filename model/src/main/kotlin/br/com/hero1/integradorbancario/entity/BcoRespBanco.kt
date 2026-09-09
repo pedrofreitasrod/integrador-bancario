@@ -49,6 +49,14 @@ class BcoRespBanco {
     @Column(name = "NUFIN")
     var nufin: BigDecimal? = null
 
+    /**
+     * Codigo de barras do boleto do DDA, quando o banco fornece. Persistido a
+     * parte porque [BcoRespBancoId.idFinanceiro] pode carregar o nosso numero
+     * (fallback do mapper). O rematch usa este campo para preencher a TGFFIN.
+     */
+    @Column(name = "CODBARRAS")
+    var codigoBarras: String? = null
+
     /** Id do pagamento no banco (retorno da API), para reconsulta de comprovante. */
     @Column(name = "IDPAGAMENTO")
     var idPagamento: String? = null

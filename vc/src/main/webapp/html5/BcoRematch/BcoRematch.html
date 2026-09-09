@@ -1,0 +1,70 @@
+<sk-application ng-controller="BcoRematchController as ctrl" creation-complete="ctrl.init()">
+    <sk-vbox flex class="bco-rematch">
+
+        <sk-hbox class="bco-rematch-filtro" layout-align="start end">
+            <sk-simple-form sk-columns="3" flex>
+                <sk-simple-item sk-label="Empresa" sk-required="true">
+                    <sk-pesquisa-input sk-value="ctrl.filtro.codEmp"
+                                       sk-entity-name="Empresa"
+                                       sk-field-name="CODEMP"></sk-pesquisa-input>
+                </sk-simple-item>
+                <sk-simple-item sk-label="Vencimento" sk-required="true">
+                    <sk-date-period-input sk-value="ctrl.filtro.periodo"></sk-date-period-input>
+                </sk-simple-item>
+                <sk-simple-item sk-label="Parceiro (opcional)">
+                    <sk-pesquisa-input sk-value="ctrl.filtro.codParc"
+                                       sk-entity-name="Parceiro"
+                                       sk-field-name="CODPARC"></sk-pesquisa-input>
+                </sk-simple-item>
+            </sk-simple-form>
+
+            <div class="bco-rematch-acao-filtro">
+                <button primary ng-click="ctrl.buscar()">Buscar</button>
+            </div>
+        </sk-hbox>
+
+        <sk-hbox flex class="bco-rematch-quadros">
+
+            <sk-vbox flex class="bco-rematch-quadro">
+                <div class="bco-rematch-quadro-head">DDAs sem vínculo</div>
+
+                <sk-dataset id="dsDda" entity-name="BcoRespBanco"
+                            sk-dataset-created="ctrl.onDatasetCreated(dataset)">
+                    <sk-field pattern="IDFINANCEIRO,IDBANCO,CODEMP,TIPORESP,CNPJBENEF,DTVENCIMENTO,VALOR,NOSSONUMERO,CODBARRAS"></sk-field>
+                </sk-dataset>
+
+                <sk-datagrid flex
+                             sk-dataset="ctrl.dsDda"
+                             sk-editable="false"
+                             sk-allow-multiple-selection="false"
+                             sk-str-filtered-columns="IDFINANCEIRO,CNPJBENEF,NOSSONUMERO"></sk-datagrid>
+            </sk-vbox>
+
+            <sk-vbox flex class="bco-rematch-quadro">
+                <div class="bco-rematch-quadro-head">Títulos a pagar sem vínculo</div>
+
+                <sk-dataset id="dsTitulo" entity-name="Financeiro"
+                            sk-dataset-created="ctrl.onDatasetCreated(dataset)">
+                    <sk-field pattern="NUFIN,CODPARC,DTVENC,VLRDESDOB,NUMNOTA,HISTORICO"></sk-field>
+                </sk-dataset>
+
+                <sk-datagrid flex
+                             sk-dataset="ctrl.dsTitulo"
+                             sk-editable="false"
+                             sk-allow-multiple-selection="false"
+                             sk-str-filtered-columns="NUFIN,NUMNOTA,HISTORICO"></sk-datagrid>
+            </sk-vbox>
+
+        </sk-hbox>
+
+        <sk-hbox class="bco-rematch-rodape" layout-align="end center">
+            <span class="bco-rematch-selecao" ng-if="ctrl.selDda && ctrl.selTitulo">
+                DDA {{ ctrl.selDda.IDFINANCEIRO }} &rarr; Financeiro {{ ctrl.selTitulo.NUFIN }}
+            </span>
+            <button primary
+                    ng-disabled="!ctrl.selDda || !ctrl.selTitulo"
+                    ng-click="ctrl.marcarMatch()">Marcar match</button>
+        </sk-hbox>
+
+    </sk-vbox>
+</sk-application>

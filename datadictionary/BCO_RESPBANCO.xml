@@ -91,6 +91,10 @@
                    readOnly="S" allowSearch="S" visibleOnSearch="S">
                 <description>Data do Pagamento</description>
             </field>
+            <field name="CODBARRAS" dataType="TEXTO" size="60"
+                   readOnly="S" allowSearch="S" visibleOnSearch="S">
+                <description>Código de Barras do Boleto</description>
+            </field>
         </fields>
     </table>
 

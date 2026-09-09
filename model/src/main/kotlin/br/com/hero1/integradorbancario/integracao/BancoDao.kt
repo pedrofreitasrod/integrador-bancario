@@ -92,6 +92,7 @@ class BancoDao {
             .set("VALOR", r.valor)
             .set("DTNEGOCIACAO", r.dataNegociacao)
             .set("NOSSONUMERO", r.nossoNumero)
+            .set("CODBARRAS", r.codigoBarras)
             .set("DTINSERCAO", r.dataInsercao)
             .set("NUFIN", r.nufin)
             .set("PROCESSADO", if (r.processado == true) "S" else "N")
@@ -104,6 +105,18 @@ class BancoDao {
             "this.NUFIN = ? and this.TIPORESP = ?",
             nufin,
             TipoRespostaEnum.DDA.value,
+        ) ?: return null
+        return toResposta(vo)
+    }
+
+    /** DDA localizado pela PK completa (para o rematch). */
+    fun respostaPorPk(pk: BcoRespBancoId): BcoRespBanco? {
+        val vo = dao(ENT_RESP).findOne(
+            "this.IDFINANCEIRO = ? and this.IDBANCO = ? and this.CODEMP = ? and this.TIPORESP = ?",
+            pk.idFinanceiro,
+            BigDecimal.valueOf((pk.idBanco ?: 0).toLong()),
+            BigDecimal.valueOf((pk.codEmp ?: 0).toLong()),
+            pk.tipoResposta,
         ) ?: return null
         return toResposta(vo)
     }
@@ -155,12 +168,7 @@ class BancoDao {
         val cnpj = cnpjBeneficiario?.filter(Char::isDigit)?.takeIf { it.isNotEmpty() } ?: return null
         if (valor == null || vencimento == null) return null
 
-        val codParc = NativeSql.getBigDecimal(
-            "CODPARC",
-            "TGFPAR",
-            "REPLACE(REPLACE(REPLACE(CGC_CPF, '.', ''), '/', ''), '-', '') = ?",
-            cnpj,
-        ) ?: return null
+        val codParc = parceiroPorCnpj(cnpj) ?: return null
 
         val de = Timestamp.valueOf(vencimento.atStartOfDay())
         val ate = Timestamp.valueOf(vencimento.plusDays(1).atStartOfDay())
@@ -187,6 +195,145 @@ class BancoDao {
     /** VO do titulo financeiro (TGFFIN) pelo NUFIN - para valores da baixa. */
     fun financeiroVO(nufin: BigDecimal): DynamicVO? =
         dao(ENT_FIN).findOne("this.NUFIN = ?", nufin)
+
+    /** CODPARC do parceiro cujo CNPJ/CPF (sem pontuacao) bate com [cnpj]. */
+    fun parceiroPorCnpj(cnpj: String): BigDecimal? {
+        val digitos = cnpj.filter(Char::isDigit).takeIf { it.isNotEmpty() } ?: return null
+        return NativeSql.getBigDecimal(
+            "CODPARC",
+            "TGFPAR",
+            "REPLACE(REPLACE(REPLACE(CGC_CPF, '.', ''), '/', ''), '-', '') = ?",
+            digitos,
+        )
+    }
+
+    data class DadosParceiro(val codParc: BigDecimal, val cnpj: String?, val nome: String?)
+
+    fun parceiro(codParc: BigDecimal): DadosParceiro? {
+        val vo = dao(ENT_PARC).findOne("this.CODPARC = ?", codParc) ?: return null
+        return DadosParceiro(
+            codParc = codParc,
+            cnpj = vo.asString("CGC_CPF")?.filter(Char::isDigit),
+            nome = vo.asString("NOMEPARC") ?: vo.asString("RAZAOSOCIAL"),
+        )
+    }
+
+    /** DDAs sem vinculo (NUFIN nulo, nao processados) da empresa e periodo de vencimento. */
+    fun ddasSemMatch(
+        codEmp: Int,
+        vencIni: LocalDate,
+        vencFim: LocalDate,
+        cnpjBeneficiario: String? = null,
+    ): List<DynamicVO> {
+        val de = Timestamp.valueOf(vencIni.atStartOfDay())
+        val ate = Timestamp.valueOf(vencFim.plusDays(1).atStartOfDay())
+        val criterio = StringBuilder(
+            "this.CODEMP = ? and this.TIPORESP = ? and this.NUFIN is null and this.PROCESSADO = 'N' " +
+                "and this.DTVENCIMENTO >= ? and this.DTVENCIMENTO < ?",
+        )
+        val params = mutableListOf<Any>(
+            BigDecimal.valueOf(codEmp.toLong()),
+            TipoRespostaEnum.DDA.value,
+            de,
+            ate,
+        )
+        cnpjBeneficiario?.filter(Char::isDigit)?.takeIf { it.isNotEmpty() }?.let {
+            criterio.append(" and this.CNPJBENEF = ?")
+            params.add(it)
+        }
+        return dao(ENT_RESP).find(criterio.toString(), *params.toTypedArray()).toList()
+    }
+
+    /**
+     * Titulos a pagar em aberto (despesa, nao provisao, nao baixado) da empresa e
+     * periodo, sem codigo de barras e sem nenhum DDA apontando o NUFIN.
+     */
+    fun titulosSemMatch(
+        codEmp: Int,
+        vencIni: LocalDate,
+        vencFim: LocalDate,
+        codParc: BigDecimal? = null,
+    ): List<DynamicVO> {
+        val de = Timestamp.valueOf(vencIni.atStartOfDay())
+        val ate = Timestamp.valueOf(vencFim.plusDays(1).atStartOfDay())
+        val criterio = StringBuilder(
+            "this.CODEMP = ? and this.RECDESP = ? and this.PROVISAO = 'N' and this.DHBAIXA is null " +
+                "and this.CODIGOBARRA is null and this.DTVENC >= ? and this.DTVENC < ?",
+        )
+        val params = mutableListOf<Any>(
+            BigDecimal.valueOf(codEmp.toLong()),
+            BigDecimal.valueOf(-1L),
+            de,
+            ate,
+        )
+        codParc?.let {
+            criterio.append(" and this.CODPARC = ?")
+            params.add(it)
+        }
+
+        val vinculados = dao(ENT_RESP)
+            .find("this.CODEMP = ? and this.NUFIN is not null", BigDecimal.valueOf(codEmp.toLong()))
+            .mapNotNull { it.asBigDecimal("NUFIN") }
+            .toHashSet()
+
+        return dao(ENT_FIN)
+            .find(criterio.toString(), *params.toTypedArray())
+            .filter { it.asString("CODIGOBARRA").isNullOrBlank() }
+            .filter { (it.asBigDecimal("NUFIN") ?: BigDecimal.ZERO) !in vinculados }
+    }
+
+    /**
+     * Efetiva o match: grava NUFIN no DDA e codigo de barras / linha digitavel no
+     * titulo. Revalida as invariantes no servidor - lanca se alguma foi violada
+     * entre a listagem e a confirmacao (ex.: outro usuario ja casou o titulo).
+     */
+    fun aplicarMatch(
+        pk: BcoRespBancoId,
+        nufin: BigDecimal,
+        codigoBarras: String?,
+        linhaDigitavel: String?,
+    ) {
+        val respVO = dao(ENT_RESP).findOne(
+            "this.IDFINANCEIRO = ? and this.IDBANCO = ? and this.CODEMP = ? and this.TIPORESP = ?",
+            pk.idFinanceiro,
+            BigDecimal.valueOf((pk.idBanco ?: 0).toLong()),
+            BigDecimal.valueOf((pk.codEmp ?: 0).toLong()),
+            pk.tipoResposta,
+        ) ?: throw IntegracaoBancariaException("DDA ${pk.idFinanceiro} nao encontrado para o match.")
+
+        if (respVO.asBigDecimal("NUFIN") != null) {
+            throw IntegracaoBancariaException(
+                "Este DDA ja foi vinculado ao financeiro ${respVO.asBigDecimal("NUFIN")?.toPlainString()}.",
+            )
+        }
+        if (respVO.asString("PROCESSADO") == "S") {
+            throw IntegracaoBancariaException("Este DDA ja foi processado.")
+        }
+
+        val finVO = dao(ENT_FIN).findOne("this.NUFIN = ?", nufin)
+            ?: throw IntegracaoBancariaException("Financeiro ${nufin.toPlainString()} nao encontrado.")
+        if (finVO.asTimestamp("DHBAIXA") != null) {
+            throw IntegracaoBancariaException("Financeiro ${nufin.toPlainString()} ja esta baixado.")
+        }
+        if (!finVO.asString("CODIGOBARRA").isNullOrBlank()) {
+            throw IntegracaoBancariaException(
+                "Financeiro ${nufin.toPlainString()} ja tem codigo de barras preenchido.",
+            )
+        }
+        if (dao(ENT_RESP).findOne("this.NUFIN = ? and this.TIPORESP = ?", nufin, TipoRespostaEnum.DDA.value) != null) {
+            throw IntegracaoBancariaException(
+                "O financeiro ${nufin.toPlainString()} ja esta vinculado a outro DDA.",
+            )
+        }
+
+        dao(ENT_RESP).prepareToUpdate(respVO).set("NUFIN", nufin).update()
+
+        if (!codigoBarras.isNullOrBlank()) {
+            val up = dao(ENT_FIN).prepareToUpdate(finVO).set("CODIGOBARRA", codigoBarras)
+            if (!linhaDigitavel.isNullOrBlank()) up.set("LINHADIGITAVEL", linhaDigitavel)
+            up.update()
+        }
+    }
 
     data class DadosEmpresa(val cnpj: String, val nome: String)
 
@@ -230,6 +377,7 @@ class BancoDao {
         dataVencimento = vo.asTimestamp("DTVENCIMENTO")
         valor = vo.asBigDecimal("VALOR")
         nossoNumero = vo.asString("NOSSONUMERO")
+        codigoBarras = vo.asString("CODBARRAS")
         nufin = vo.asBigDecimal("NUFIN")
         processado = vo.asBoolean("PROCESSADO")
         idPagamento = vo.asString("IDPAGAMENTO")
@@ -243,5 +391,6 @@ class BancoDao {
         const val ENT_RESP = "BcoRespBanco"
         const val ENT_FIN = "Financeiro"
         const val ENT_EMP = "Empresa"
+        const val ENT_PARC = "Parceiro"
     }
 }

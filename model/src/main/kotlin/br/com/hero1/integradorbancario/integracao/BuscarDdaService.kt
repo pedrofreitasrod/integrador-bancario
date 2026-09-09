@@ -126,6 +126,7 @@ class BuscarDdaService(
             valor = dda.valor
             dataNegociacao = dda.dataNegociacao?.let { Timestamp.valueOf(it.atStartOfDay()) }
             nossoNumero = dda.nossoNumero
+            codigoBarras = dda.codigoBarras
             dataInsercao = Timestamp(System.currentTimeMillis())
             processado = false
             // Matching automatico: tenta vincular a um titulo a pagar em aberto.

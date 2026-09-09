@@ -54,4 +54,8 @@ object IntegracaoBancaria {
     val pagarDdaService: PagarDdaService by lazy {
         PagarDdaService(BancoDao(), pagamentoService, BaixaSankhya(), AnexoFinanceiro())
     }
+
+    val rematchService: RematchService by lazy {
+        RematchService(BancoDao())
+    }
 }

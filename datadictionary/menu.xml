@@ -28,6 +28,11 @@
             <dynamicForm instance="BcoLog"
                          id="BcoLog"
                          description="Hero1 - Log do Integrador"/>
+
+            <ui id="BcoRematch"
+                resourceId="BcoRematch"
+                url="/$ctx/BcoRematch.xhtml5"
+                description="Hero1 - Gestão de DDA"/>
         </folder>
 
     </menu>
