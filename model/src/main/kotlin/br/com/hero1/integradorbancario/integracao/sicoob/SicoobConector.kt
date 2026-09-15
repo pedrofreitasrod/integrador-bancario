@@ -7,6 +7,7 @@ import br.com.hero1.integradorbancario.integracao.ConsultaBancariaException
 import br.com.hero1.integradorbancario.integracao.PagamentoBancarioException
 import br.com.hero1.integradorbancario.integracao.dominio.BoletoParaPagar
 import br.com.hero1.integradorbancario.integracao.dominio.ComandoAutenticacao
+import br.com.hero1.integradorbancario.integracao.dominio.ComandoCancelamento
 import br.com.hero1.integradorbancario.integracao.dominio.ComandoPagamento
 import br.com.hero1.integradorbancario.integracao.dominio.ComprovantePagamento
 import br.com.hero1.integradorbancario.integracao.dominio.ConsultaBoleto
@@ -16,11 +17,13 @@ import br.com.hero1.integradorbancario.integracao.dominio.FiltroDda
 import br.com.hero1.integradorbancario.integracao.dominio.ResultadoAutenticacao
 import br.com.hero1.integradorbancario.integracao.sicoob.dto.SicoobBoletoConsultaResponse
 import br.com.hero1.integradorbancario.integracao.sicoob.dto.SicoobBoletoDdaDto
+import br.com.hero1.integradorbancario.integracao.sicoob.dto.SicoobCancelamentoRequest
 import br.com.hero1.integradorbancario.integracao.sicoob.dto.SicoobComprovanteResponse
 import br.com.hero1.integradorbancario.integracao.sicoob.dto.SicoobDebtorAccount
 import br.com.hero1.integradorbancario.integracao.sicoob.dto.SicoobErroResponse
 import br.com.hero1.integradorbancario.integracao.sicoob.dto.SicoobPagamentoRequest
 import java.net.URLEncoder
+import java.time.LocalDate
 import java.util.UUID
 
 /**
@@ -107,7 +110,11 @@ class SicoobConector(
             numeroCpfCnpjPortador = comando.cpfCnpjPortador.filter(Char::isDigit),
             nomePortador = comando.nomePortador,
             amount = comando.valorPagamento,
-            date = comando.dataPagamento?.toString(),
+            // Sicoob rejeita o campo ausente/null (HTTP 400 "date: nao pode estar
+            // nulo"), apesar da doc oficial dizer que e opcional. O contrato do
+            // dominio (ComandoPagamento.dataPagamento null = "paga hoje") fica
+            // igual pros outros bancos; so aqui resolvemos a data concreta.
+            date = (comando.dataPagamento ?: LocalDate.now()).toString(),
             debtorAccount = SicoobDebtorAccount(
                 issuer = cooperativaEmDigitos(credencial).toInt(),
                 number = numeroConta.toLong(),
@@ -138,10 +145,13 @@ class SicoobConector(
     }
 
     override fun consultarComprovante(consulta: ConsultaComprovante): ComprovantePagamento {
-        val ctx = contexto(consulta.credencial, consulta.sandbox)
+        val credencial = consulta.credencial
+        val numeroConta = contaEmDigitos(credencial)
+        val ctx = contexto(credencial, consulta.sandbox)
 
         val url = basePagamentos(consulta.sandbox) +
-            "/boletos/pagamentos/" + consulta.idPagamento + "/comprovantes"
+            "/boletos/pagamentos/" + consulta.idPagamento + "/comprovantes" +
+            "?numeroConta=" + enc(numeroConta)
 
         val resposta = http.get(url, ctx.headers, ctx.mtls)
         if (!resposta.ok) {
@@ -153,6 +163,25 @@ class SicoobConector(
         val dto = http.ler(resposta.corpo, SicoobComprovanteResponse::class.java)?.resultado
             ?: throw ConsultaBancariaException("Sicoob nao retornou o comprovante")
         return mapper.paraComprovante(dto)
+    }
+
+    /** `DELETE {pagamentos-v3}/boletos/pagamentos/agendamentos/{idPagamento}` (Cancelar um agendamento de pagamento). */
+    override fun cancelarAgendamento(comando: ComandoCancelamento) {
+        val credencial = comando.credencial
+        val numeroConta = contaEmDigitos(credencial)
+        val ctx = contexto(credencial, comando.sandbox)
+
+        val url = basePagamentos(comando.sandbox) +
+            "/boletos/pagamentos/agendamentos/" + comando.idPagamento
+
+        val corpo = SicoobCancelamentoRequest(numeroConta = numeroConta.toLong())
+
+        val resposta = http.delete(url, corpo, SicoobCancelamentoRequest::class.java, ctx.headers, ctx.mtls)
+        if (!resposta.ok) {
+            throw PagamentoBancarioException(
+                "Sicoob recusou o cancelamento do agendamento (HTTP ${resposta.status}): ${mensagemErro(resposta.corpo)}",
+            )
+        }
     }
 
     // --- helpers ----------------------------------------------------------

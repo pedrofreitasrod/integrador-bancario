@@ -12,6 +12,10 @@
                    allowSearch="S" visibleOnSearch="S">
                 <description>Integrado</description>
             </field>
+            <field name="BCO_NOSSONUM" dataType="TEXTO" readOnly="S" order="2" size="50"
+                   allowSearch="S" visibleOnSearch="S">
+                <description>Nosso numero integrado</description>
+            </field>
 
         </fields>
     </nativeTable>

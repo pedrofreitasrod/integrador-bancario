@@ -95,6 +95,14 @@
                    readOnly="S" allowSearch="S" visibleOnSearch="S">
                 <description>Código de Barras do Boleto</description>
             </field>
+            <field name="NUMERODOC" dataType="INTEIRO"
+                   readOnly="S" allowSearch="S" visibleOnSearch="S">
+                <description>Nº do documento (para match com NUMNOTA)</description>
+            </field>
+            <field name="CHAVEANEXO" dataType="TEXTO" size="60"
+                   readOnly="S" allowSearch="S" visibleOnSearch="S">
+                <description>Chave do anexo (TSIANX) do comprovante ja gerado</description>
+            </field>
         </fields>
     </table>
 

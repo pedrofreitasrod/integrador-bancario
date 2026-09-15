@@ -93,6 +93,7 @@ class BancoDao {
             .set("DTNEGOCIACAO", r.dataNegociacao)
             .set("NOSSONUMERO", r.nossoNumero)
             .set("CODBARRAS", r.codigoBarras)
+            .set("NUMERODOC", r.numeroDoc?.let { BigDecimal.valueOf(it.toLong()) })
             .set("DTINSERCAO", r.dataInsercao)
             .set("NUFIN", r.nufin)
             .set("PROCESSADO", if (r.processado == true) "S" else "N")
@@ -135,14 +136,7 @@ class BancoDao {
         dataPagamento: Timestamp?,
         processado: Boolean,
     ) {
-        val vo = dao(ENT_RESP).findOne(
-            "this.IDFINANCEIRO = ? and this.IDBANCO = ? and this.CODEMP = ? and this.TIPORESP = ?",
-            pk.idFinanceiro,
-            BigDecimal.valueOf((pk.idBanco ?: 0).toLong()),
-            BigDecimal.valueOf((pk.codEmp ?: 0).toLong()),
-            pk.tipoResposta,
-        ) ?: throw IntegracaoBancariaException("DDA ${pk.idFinanceiro} nao encontrado para marcar como pago")
-
+        val vo = respostaPorPkOuFalha(pk, "marcar como pago")
         dao(ENT_RESP).prepareToUpdate(vo)
             .set("IDPAGAMENTO", idPagamento)
             .set("AUTENTICACAO", autenticacao)
@@ -154,19 +148,54 @@ class BancoDao {
             .update()
     }
 
+    /** Grava a chave do anexo (TSIANX) do comprovante ja gerado - evita reanexar a cada reconsulta. */
+    fun marcarAnexoComprovante(pk: BcoRespBancoId, chaveAnexo: String) {
+        val vo = respostaPorPkOuFalha(pk, "gravar o anexo do comprovante")
+        dao(ENT_RESP).prepareToUpdate(vo).set("CHAVEANEXO", chaveAnexo).update()
+    }
+
+    /**
+     * Fecha o ciclo do DDA (pagamento efetivado + baixa concluida) depois que
+     * [marcarPago] ja gravou os dados do pagamento. Separado de `marcarPago`
+     * de proposito: o IDPAGAMENTO precisa ficar salvo mesmo que a baixa falhe
+     * depois - sem isso, um pagamento que o banco ja efetivou (irreversivel)
+     * ficaria sem nenhum rastro no Sankhya se a baixa der erro.
+     */
+    fun marcarProcessado(pk: BcoRespBancoId) {
+        val vo = respostaPorPkOuFalha(pk, "marcar como processado")
+        dao(ENT_RESP).prepareToUpdate(vo)
+            .set("PROCESSADO", "S")
+            .set("DTPROCESSAMENTO", Timestamp(System.currentTimeMillis()))
+            .update()
+    }
+
+    private fun respostaPorPkOuFalha(pk: BcoRespBancoId, acao: String): DynamicVO =
+        dao(ENT_RESP).findOne(
+            "this.IDFINANCEIRO = ? and this.IDBANCO = ? and this.CODEMP = ? and this.TIPORESP = ?",
+            pk.idFinanceiro,
+            BigDecimal.valueOf((pk.idBanco ?: 0).toLong()),
+            BigDecimal.valueOf((pk.codEmp ?: 0).toLong()),
+            pk.tipoResposta,
+        ) ?: throw IntegracaoBancariaException("DDA ${pk.idFinanceiro} nao encontrado para $acao")
+
     /**
      * Procura um titulo a pagar em aberto que corresponda ao DDA (matching
      * automatico na busca). Criterio: empresa + parceiro (por CNPJ) + valor +
-     * vencimento, nao baixado, nao provisao. @return NUFIN ou null.
+     * vencimento + NUMERODOC do DDA batendo com NUMNOTA do titulo, nao
+     * baixado, nao provisao, ainda nao integrado por outro DDA (BCO_INTEGRADO).
+     * O criterio de NUMNOTA e obrigatorio (AND, nao fallback): DDA sem numero
+     * de documento nao casa automaticamente.
+     * @return NUFIN ou null.
      */
     fun acharNufinAberto(
         codEmp: Int,
         cnpjBeneficiario: String?,
         valor: BigDecimal?,
         vencimento: LocalDate?,
+        numeroDocumento: Int?,
     ): BigDecimal? {
         val cnpj = cnpjBeneficiario?.filter(Char::isDigit)?.takeIf { it.isNotEmpty() } ?: return null
-        if (valor == null || vencimento == null) return null
+        if (valor == null || vencimento == null || numeroDocumento == null) return null
 
         val codParc = parceiroPorCnpj(cnpj) ?: return null
 
@@ -174,22 +203,40 @@ class BancoDao {
         val ate = Timestamp.valueOf(vencimento.plusDays(1).atStartOfDay())
         val candidatos = dao(ENT_FIN).find(
             "this.CODEMP = ? and this.CODPARC = ? and this.PROVISAO = 'N' and this.DHBAIXA is null " +
-                "and this.VLRDESDOB = ? and this.DTVENC >= ? and this.DTVENC < ?",
+                "and this.VLRDESDOB = ? and this.DTVENC >= ? and this.DTVENC < ? and this.NUMNOTA = ? " +
+                "and (this.BCO_INTEGRADO is null or this.BCO_INTEGRADO <> 'S')",
             BigDecimal.valueOf(codEmp.toLong()),
             codParc,
             valor,
             de,
             ate,
+            BigDecimal.valueOf(numeroDocumento.toLong()),
         )
         val lista = candidatos.toList()
         if (lista.isEmpty()) return null
         if (lista.size > 1) {
             log.warning(
-                "Matching de DDA ambiguo (empresa=$codEmp parceiro=$codParc valor=$valor venc=$vencimento): " +
-                    "${lista.size} titulos - usando o primeiro.",
+                "Matching de DDA ambiguo (empresa=$codEmp parceiro=$codParc valor=$valor venc=$vencimento " +
+                    "numeroDoc=$numeroDocumento): ${lista.size} titulos - usando o primeiro.",
             )
         }
         return lista.first().asBigDecimalOrZero("NUFIN")
+    }
+
+    /**
+     * Preenche os dados do boleto no titulo (TGFFIN) e marca BCO_INTEGRADO ao
+     * vincular um DDA cujo match foi automatico (na busca) - sem as validacoes
+     * de conflito do rematch manual ([aplicarMatch]), que so fazem sentido
+     * quando um usuario confirma na tela.
+     */
+    fun marcarTituloIntegrado(
+        nufin: BigDecimal,
+        codigoBarras: String?,
+        linhaDigitavel: String?,
+        nossoNumero: String?,
+    ) {
+        val finVO = dao(ENT_FIN).findOne("this.NUFIN = ?", nufin) ?: return
+        preencherTituloVinculado(finVO, codigoBarras, linhaDigitavel, nossoNumero)
     }
 
     /** VO do titulo financeiro (TGFFIN) pelo NUFIN - para valores da baixa. */
@@ -327,12 +374,21 @@ class BancoDao {
         }
 
         dao(ENT_RESP).prepareToUpdate(respVO).set("NUFIN", nufin).update()
+        preencherTituloVinculado(finVO, codigoBarras, linhaDigitavel, respVO.asString("NOSSONUMERO"))
+    }
 
-        if (!codigoBarras.isNullOrBlank()) {
-            val up = dao(ENT_FIN).prepareToUpdate(finVO).set("CODIGOBARRA", codigoBarras)
-            if (!linhaDigitavel.isNullOrBlank()) up.set("LINHADIGITAVEL", linhaDigitavel)
-            up.update()
-        }
+    /** Grava CODIGOBARRA/LINHADIGITAVEL/BCO_NOSSONUM (quando informados) e marca BCO_INTEGRADO no titulo. */
+    private fun preencherTituloVinculado(
+        finVO: DynamicVO,
+        codigoBarras: String?,
+        linhaDigitavel: String?,
+        nossoNumero: String?,
+    ) {
+        val up = dao(ENT_FIN).prepareToUpdate(finVO).set("BCO_INTEGRADO", "S")
+        if (!codigoBarras.isNullOrBlank()) up.set("CODIGOBARRA", codigoBarras)
+        if (!linhaDigitavel.isNullOrBlank()) up.set("LINHADIGITAVEL", linhaDigitavel)
+        if (!nossoNumero.isNullOrBlank()) up.set("BCO_NOSSONUM", nossoNumero)
+        up.update()
     }
 
     data class DadosEmpresa(val cnpj: String, val nome: String)
@@ -378,9 +434,11 @@ class BancoDao {
         valor = vo.asBigDecimal("VALOR")
         nossoNumero = vo.asString("NOSSONUMERO")
         codigoBarras = vo.asString("CODBARRAS")
+        numeroDoc = vo.asBigDecimal("NUMERODOC")?.toInt()
         nufin = vo.asBigDecimal("NUFIN")
         processado = vo.asBoolean("PROCESSADO")
         idPagamento = vo.asString("IDPAGAMENTO")
+        chaveAnexo = vo.asString("CHAVEANEXO")
     }
 
     private fun dao(entidade: String) = JapeFactory.dao(entidade)

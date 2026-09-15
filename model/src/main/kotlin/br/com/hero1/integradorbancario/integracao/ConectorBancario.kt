@@ -2,6 +2,7 @@ package br.com.hero1.integradorbancario.integracao
 
 import br.com.hero1.integradorbancario.integracao.dominio.BoletoParaPagar
 import br.com.hero1.integradorbancario.integracao.dominio.ComandoAutenticacao
+import br.com.hero1.integradorbancario.integracao.dominio.ComandoCancelamento
 import br.com.hero1.integradorbancario.integracao.dominio.ComandoPagamento
 import br.com.hero1.integradorbancario.integracao.dominio.ComprovantePagamento
 import br.com.hero1.integradorbancario.integracao.dominio.ConsultaBoleto
@@ -44,4 +45,11 @@ interface ConectorBancario {
 
     /** Reconsulta o comprovante de um pagamento ja efetuado/agendado. */
     fun consultarComprovante(consulta: ConsultaComprovante): ComprovantePagamento
+
+    /**
+     * Cancela um pagamento agendado (ainda nao efetivado). Lanca
+     * [PagamentoBancarioException] se o banco recusar (ex.: pagamento ja
+     * efetivado, nao pode mais ser cancelado).
+     */
+    fun cancelarAgendamento(comando: ComandoCancelamento)
 }

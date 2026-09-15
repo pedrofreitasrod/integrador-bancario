@@ -18,8 +18,13 @@ data class SicoobPagamentoRequest(
     @Json(name = "nomePortador") val nomePortador: String,
     /** Valor efetivo de pagamento. */
     @Json(name = "amount") val amount: BigDecimal,
-    /** Data de pagamento "yyyy-MM-dd"; ausente = hoje. */
-    @Json(name = "date") val date: String? = null,
+    /**
+     * Data de pagamento "yyyy-MM-dd". Obrigatorio na pratica: apesar da doc do
+     * Sicoob dizer "opcional", a API rejeita null/ausente com HTTP 400
+     * ("date: nao pode estar nulo") - `SicoobConector.pagarBoleto` sempre
+     * resolve pra hoje quando o chamador nao especifica.
+     */
+    @Json(name = "date") val date: String,
     @Json(name = "debtorAccount") val debtorAccount: SicoobDebtorAccount,
 )
 

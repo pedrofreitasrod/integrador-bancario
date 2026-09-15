@@ -119,6 +119,9 @@ class BuscarDdaService(
         val pk = BcoRespBancoId(dda.idFinanceiro, idBanco, codEmp, TipoRespostaEnum.DDA.value)
         if (dao.respostaExiste(pk)) return false
 
+        // Matching automatico: tenta vincular a um titulo a pagar em aberto.
+        val nufin = dao.acharNufinAberto(codEmp, dda.cnpjBeneficiario, dda.valor, dda.dataVencimento, dda.numeroDocumento)
+
         val registro = BcoRespBanco().apply {
             id = pk
             cnpjBeneficiario = dda.cnpjBeneficiario
@@ -127,12 +130,15 @@ class BuscarDdaService(
             dataNegociacao = dda.dataNegociacao?.let { Timestamp.valueOf(it.atStartOfDay()) }
             nossoNumero = dda.nossoNumero
             codigoBarras = dda.codigoBarras
+            numeroDoc = dda.numeroDocumento
             dataInsercao = Timestamp(System.currentTimeMillis())
             processado = false
-            // Matching automatico: tenta vincular a um titulo a pagar em aberto.
-            nufin = dao.acharNufinAberto(codEmp, dda.cnpjBeneficiario, dda.valor, dda.dataVencimento)
+            this.nufin = nufin
         }
         dao.inserirResposta(registro)
+        if (nufin != null) {
+            dao.marcarTituloIntegrado(nufin, dda.codigoBarras, dda.codigoBarras?.let(LinhaDigitavel::deCodigoBarras), dda.nossoNumero)
+        }
         return true
     }
 

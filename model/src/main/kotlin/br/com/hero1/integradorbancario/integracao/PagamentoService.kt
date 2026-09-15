@@ -3,6 +3,7 @@ package br.com.hero1.integradorbancario.integracao
 import br.com.hero1.integradorbancario.entity.BcoCadBanco
 import br.com.hero1.integradorbancario.entity.BcoParamBanco
 import br.com.hero1.integradorbancario.integracao.dominio.BoletoParaPagar
+import br.com.hero1.integradorbancario.integracao.dominio.ComandoCancelamento
 import br.com.hero1.integradorbancario.integracao.dominio.ComandoPagamento
 import br.com.hero1.integradorbancario.integracao.dominio.ComprovantePagamento
 import br.com.hero1.integradorbancario.integracao.dominio.ConsultaBoleto
@@ -105,6 +106,14 @@ class PagamentoService(
         val alvo = resolver(idBanco, codEmp)
         return alvo.conector.consultarComprovante(
             ConsultaComprovante(alvo.credencial, alvo.sandbox, idPagamento),
+        )
+    }
+
+    /** Cancela um pagamento agendado (ainda nao efetivado). */
+    fun cancelarAgendamento(idBanco: Int, codEmp: Int, idPagamento: Long) {
+        val alvo = resolver(idBanco, codEmp)
+        alvo.conector.cancelarAgendamento(
+            ComandoCancelamento(alvo.credencial, alvo.sandbox, idPagamento),
         )
     }
 

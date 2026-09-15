@@ -61,6 +61,10 @@ open class BcoRespBanco {
     @Column(name = "CODBARRAS")
     var codigoBarras: String? = null
 
+    /** Numero do documento do boleto, usado como criterio adicional de match automatico com TGFFIN.NUMNOTA. */
+    @Column(name = "NUMERODOC")
+    var numeroDoc: Int? = null
+
     /** Id do pagamento no banco (retorno da API), para reconsulta de comprovante. */
     @Column(name = "IDPAGAMENTO")
     var idPagamento: String? = null
@@ -77,6 +81,10 @@ open class BcoRespBanco {
 
     @Column(name = "DTPAGAMENTO")
     var dataPagamento: Timestamp? = null
+
+    /** CHAVEARQUIVO (TSIANX) do PDF do comprovante ja anexado - evita reanexar a cada reconsulta. */
+    @Column(name = "CHAVEANEXO")
+    var chaveAnexo: String? = null
 
     /** Tipo de resposta (discriminador), que mora na PK ([BcoRespBancoId.tipoResposta]). */
     fun tipoResposta(): TipoRespostaEnum? = id?.tipoRespostaEnum()

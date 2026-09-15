@@ -28,4 +28,6 @@ data class Dda(
      * a [idFinanceiro].
      */
     val codigoBarras: String? = null,
+    /** Numero do documento do boleto, usado como criterio adicional de match automatico com TGFFIN.NUMNOTA. */
+    val numeroDocumento: Int? = null,
 )
