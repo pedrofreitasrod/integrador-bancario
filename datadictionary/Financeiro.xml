@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<metadados xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:noNamespaceSchemaLocation="../.gradle/metadados.xsd">
+
+    <nativeTable name="TGFFIN">
+        <instances>
+            <nativeInstance name="Financeiro">
+            </nativeInstance>
+        </instances>
+        <fields>
+            <field name="BCO_INTEGRADO" dataType="CHECKBOX" readOnly="S" order="1"
+                   allowSearch="S" visibleOnSearch="S">
+                <description>Integrado</description>
+            </field>
+
+        </fields>
+    </nativeTable>
+
+</metadados>

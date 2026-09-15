@@ -3,6 +3,8 @@ package br.com.hero1.integradorbancario.entity
 import br.com.sankhya.studio.persistence.Column
 import br.com.sankhya.studio.persistence.Id
 import br.com.sankhya.studio.persistence.JapeEntity
+import lombok.Data
+import lombok.NoArgsConstructor
 
 /**
  * Cadastro de bancos (BCO_CADBANCO).
@@ -11,8 +13,10 @@ import br.com.sankhya.studio.persistence.JapeEntity
  * que o JAPE exige, sem precisar do plugin kotlin-noarg. Propriedades `var`
  * nullable para o framework popular via reflexao.
  */
+@Data
+@NoArgsConstructor
 @JapeEntity(entity = "BcoCadBanco", table = "BCO_CADBANCO")
-class BcoCadBanco {
+open class BcoCadBanco {
 
     @Id
     @Column(name = "ID")
@@ -26,4 +30,8 @@ class BcoCadBanco {
 
     @Column(name = "SANDBOX")
     var sandbox: Boolean? = null
+
+    private fun getId(id:Int?){
+        this.id = id
+    }
 }

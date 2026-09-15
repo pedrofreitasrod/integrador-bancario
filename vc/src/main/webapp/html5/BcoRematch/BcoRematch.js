@@ -73,13 +73,11 @@ angular.module('BcoRematchApp', ['snk'])
                 }
                 var p = self.filtro.periodo;
                 var c = new Criteria(
-                    "this.CODEMP = :codEmp and this.RECDESP = -1 and this.PROVISAO = 'N' and this.DHBAIXA is null " +
+                    "this.CODEMP = ? and this.RECDESP = -1 and this.PROVISAO = 'N' and this.DHBAIXA is null " +
                     "and this.CODIGOBARRA is null " +
-                    "and this.DTVENC >= :ini and this.DTVENC < :fim " +
-                    "and not exists (select 1 from BCO_RESPBANCO R where R.NUFIN = this.NUFIN)")
-                    .addParameter('codEmp', self.filtro.codEmp, self.filtro.codEmp)
-                    .addParameter('ini', inicioDia(p.dtIni), inicioDia(p.dtIni))
-                    .addParameter('fim', diaSeguinte(p.dtFin), diaSeguinte(p.dtFin));
+                    "and this.DTVENC >= ? and this.DTVENC < ? " +
+                    "and not exists (select 1 from BCO_RESPBANCO R where R.NUFIN = this.NUFIN)",[self.filtro.codEmp,inicioDia(p.dtIni),diaSeguinte(p.dtFin)])
+                   
                 if (self.filtro.codParc) {
                     c.and("this.CODPARC = :codParc")
                         .addParameter('codParc', self.filtro.codParc, self.filtro.codParc);

@@ -3,6 +3,8 @@ package br.com.hero1.integradorbancario.entity
 import br.com.sankhya.studio.persistence.Column
 import br.com.sankhya.studio.persistence.Id
 import br.com.sankhya.studio.persistence.JapeEntity
+import lombok.Data
+import lombok.NoArgsConstructor
 import java.math.BigDecimal
 import java.sql.Timestamp
 
@@ -16,8 +18,10 @@ import java.sql.Timestamp
  *
  * Sem construtor primario -> Kotlin gera o no-arg exigido pelo JAPE.
  */
+@Data
+@NoArgsConstructor
 @JapeEntity(entity = "BcoRespBanco", table = "BCO_RESPBANCO")
-class BcoRespBanco {
+open class BcoRespBanco {
 
     @Id
     var id: BcoRespBancoId? = null

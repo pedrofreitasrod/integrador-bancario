@@ -6,6 +6,7 @@ import br.com.hero1.integradorbancario.entity.TipoRespostaEnum
 import br.com.sankhya.jape.core.JapeSession
 import br.com.sankhya.jape.core.JapeSession.SessionHandle
 import br.com.sankhya.jape.vo.DynamicVO
+import com.sankhya.util.StringUtils
 import java.math.BigDecimal
 import java.time.LocalDate
 
@@ -93,33 +94,47 @@ class RematchService(private val dao: BancoDao) {
     }
 
     fun confirmar(cmd: RematchComando): RematchResultado {
-        val pk = BcoRespBancoId(cmd.idFinanceiro, cmd.idBanco, cmd.codEmp, cmd.tipoResp)
-        val dda = dao.respostaPorPk(pk)
-            ?: throw IntegracaoBancariaException("DDA ${cmd.idFinanceiro} nao encontrado.")
-        val finVO = dao.financeiroVO(cmd.nufin)
-            ?: throw IntegracaoBancariaException("Financeiro ${cmd.nufin.toPlainString()} nao encontrado.")
+        var hnd: SessionHandle? = null
+        try {
+            hnd = JapeSession.open()
+            hnd.execEnsuringTX {
+                val pk = BcoRespBancoId(cmd.idFinanceiro, cmd.idBanco, cmd.codEmp, cmd.tipoResp)
+                val dda = dao.respostaPorPk(pk)
+                    ?: throw IntegracaoBancariaException("DDA ${cmd.idFinanceiro} nao encontrado.")
+                val finVO = dao.financeiroVO(cmd.nufin)
+                    ?: throw IntegracaoBancariaException("Financeiro ${cmd.nufin.toPlainString()} nao encontrado.")
 
-        val divergencias = divergencias(dda, finVO)
-        val codBarras = codigoBarrasDe(dda.codigoBarras, pk.idFinanceiro)
-        if (codBarras == null) {
-            divergencias.add(
-                "DDA sem codigo de barras - o titulo sera vinculado, mas CODIGOBARRA/LINHADIGITAVEL nao serao preenchidos.",
-            )
+                val divergencias = divergencias(dda, finVO)
+                val codBarras = codigoBarrasDe(dda.codigoBarras, pk.idFinanceiro)
+                if (codBarras == null) {
+                    divergencias.add(
+                        "DDA sem codigo de barras - o titulo sera vinculado, mas CODIGOBARRA/LINHADIGITAVEL nao serao preenchidos.",
+                    )
+                }
+                val sbr = StringBuilder()
+                if (divergencias.isNotEmpty() && !cmd.confirmado) {
+                    divergencias.forEach { it->
+                        sbr.append(it+"\n")
+                    }
+                    throw Exception(sbr.toString())
+                }
+
+                dao.aplicarMatch(pk, cmd.nufin, codBarras, codBarras?.let(LinhaDigitavel::deCodigoBarras))
+
+                LogHelper(cmd.codEmp).registrar(
+                    LogHelper.Status.INFO,
+                    "Match manual: DDA ${cmd.idFinanceiro} vinculado ao financeiro ${cmd.nufin.toPlainString()}" +
+                        if (divergencias.isEmpty()) "." else " (divergencias confirmadas: ${divergencias.joinToString(" | ")}).",
+                    origem = ORIGEM,
+                )
+            }
+            return RematchResultado(emptyList(), aplicado = true)
+        }catch (e:Exception){
+            throw e
+        }finally {
+            JapeSession.close(hnd)
         }
 
-        if (divergencias.isNotEmpty() && !cmd.confirmado) {
-            return RematchResultado(divergencias, aplicado = false)
-        }
-
-        dao.aplicarMatch(pk, cmd.nufin, codBarras, codBarras?.let(LinhaDigitavel::deCodigoBarras))
-
-        LogHelper(cmd.codEmp).registrar(
-            LogHelper.Status.INFO,
-            "Match manual: DDA ${cmd.idFinanceiro} vinculado ao financeiro ${cmd.nufin.toPlainString()}" +
-                if (divergencias.isEmpty()) "." else " (divergencias confirmadas: ${divergencias.joinToString(" | ")}).",
-            origem = ORIGEM,
-        )
-        return RematchResultado(emptyList(), aplicado = true)
     }
 
     // --- helpers ---------------------------------------------------------------
