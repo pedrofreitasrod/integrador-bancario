@@ -11,7 +11,12 @@ import java.io.File
 import java.math.BigDecimal
 import java.nio.file.Files
 import java.sql.Timestamp
-import java.text.SimpleDateFormat
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.logging.Logger
 
 /**
@@ -37,10 +42,7 @@ class AnexoFinanceiro {
         val chaveArquivo = "pdf_" + UIDGenerator.getNextID()
         val nomeArquivo = "Comprovante_${nufin.toPlainString()}.pdf"
 
-        val pdf = ComprovantePdf.gerar(
-            titulo = "Comprovante de Pagamento - DDA",
-            linhas = linhasComprovante(nufin, comprovante, boleto),
-        )
+        val pdf = gerarPdf(nufin, comprovante, boleto.codigoBarras)
 
         val diretorio: File = AnexoHelper.getAnexosDir(agora)
         if (!diretorio.exists()) diretorio.mkdirs()
@@ -56,29 +58,89 @@ class AnexoFinanceiro {
         return chaveArquivo
     }
 
-    private fun linhasComprovante(
-        nufin: BigDecimal,
-        c: ComprovantePagamento,
-        b: BoletoParaPagar,
-    ): List<String> {
-        val data = SimpleDateFormat("dd/MM/yyyy HH:mm").format(java.util.Date())
-        return listOf(
-            "Emitido em: $data",
-            "",
-            "Financeiro (NUFIN): ${nufin.toPlainString()}",
-            "Codigo de barras: ${b.codigoBarras}",
-            "Linha digitavel: ${b.linhaDigitavel ?: "-"}",
-            "Beneficiario: ${b.nomeBeneficiario ?: "-"} (${b.cnpjBeneficiario ?: "-"})",
-            "Vencimento: ${b.dataVencimento?.toString() ?: "-"}",
-            "",
-            "Id do pagamento: ${c.idPagamento}",
-            "Autenticacao: ${c.autenticacao ?: "-"}",
-            "Situacao: ${c.situacao ?: "-"}",
-            "Detalhe: ${c.detalheSituacao ?: "-"}",
-            "Data do pagamento: ${c.dataPagamento?.toString() ?: "-"}",
-            "Valor pago: R$ ${c.valorPagamento?.toPlainString() ?: "-"}",
-        )
+    /**
+     * So gera os bytes do PDF - sem gravar nada (nem arquivo em disco, nem
+     * TSIANX). Uso: botao "Consultar Comprovante" (so visualizar, sem
+     * efeito colateral) via `SessionFile`.
+     *
+     * Layout "extrato bancario": pagina estreita, banner colorido pela
+     * situacao (verde/vermelho/cinza), campos rotulo/valor, divisores. Os
+     * campos de beneficiario/pagador/conta/valores vem do comprovante ([c])
+     * - e a versao final, confirmada pelo banco no momento do pagamento. So o
+     * codigo de barras nao vem no comprovante (a PK do DDA e a fonte).
+     */
+    fun gerarPdf(nufin: BigDecimal, c: ComprovantePagamento, codigoBarras: String): ByteArray {
+        val situacao = c.situacao?.trim()
+        val efetivado = situacao.equals("Efetivado", ignoreCase = true)
+        val falhou = situacao.equals("Rejeitado", ignoreCase = true) || situacao.equals("Cancelado", ignoreCase = true)
+        val (corFundoBanner, corBanner) = when {
+            efetivado -> CorPdf.VERDE_FUNDO to CorPdf.VERDE
+            falhou -> CorPdf.VERMELHO_FUNDO to CorPdf.VERMELHO
+            else -> CorPdf.CINZA_FUNDO to CorPdf.CINZA_TEXTO
+        }
+        val agencia = listOfNotNull(c.numeroAgencia, c.nomeAgencia).joinToString(" ").ifBlank { null }
+        val contaDebitada = listOfNotNull(agencia, c.numeroConta, c.nomeProprietarioConta)
+            .joinToString("/").ifBlank { "-" }
+
+        val builder = ComprovantePdf.Builder()
+            .banner(c.tituloComprovante ?: (situacao?.uppercase() ?: "COMPROVANTE DE PAGAMENTO"), corFundoBanner, corBanner)
+            .espaco(6.0)
+            .valorGrande(formatarMoeda(c.valorPagamento ?: c.valorBoleto))
+            .subtitulo(
+                c.dataPagamento?.let { "Pagamento em ${formatarData(it)}" } ?: "Situacao: ${situacao ?: "-"}",
+            )
+        (c.observacao ?: "Pagamento DDA - NUFIN ${nufin.toPlainString()}").let { builder.subtitulo(it) }
+
+        builder
+            .espaco(10.0)
+            .tituloSecao("Comprovante de pagamento")
+            .caixaInfo(
+                "Comprovante para simples conferencia - gerado em ${formatarDataHora(LocalDateTime.now())}",
+                CorPdf.AZUL_FUNDO,
+                CorPdf.AZUL_TEXTO,
+            )
+            .espaco(6.0)
+            .tituloSecao("Beneficiario")
+            .campo("Nome/Razao social", c.nomeBeneficiario ?: "-")
+            .campo("CPF/CNPJ", c.cnpjBeneficiario ?: "-")
+            .campo("Instituicao", c.instituicaoBeneficiaria ?: "-")
+            .divisor()
+            .tituloSecao("Pagador")
+            .campo("Nome/Razao social", c.nomePagador ?: "-")
+            .campo("CPF/CNPJ", c.cnpjPagador ?: "-")
+            .campo("Conta debitada", contaDebitada)
+            .divisor()
+            .campo("Financeiro (NUFIN)", nufin.toPlainString())
+            .campo("Numero do documento", c.numeroDocumento ?: "-")
+            .campo("Nosso numero", c.nossoNumero ?: "-")
+            .campo("Numero do agendamento", c.idPagamento.toString())
+            .campo("Data de cadastro no banco", formatarData(c.dataCadastro))
+            .campo("Data do vencimento", formatarData(c.dataVencimento))
+            .campo("Data do pagamento", formatarData(c.dataPagamento))
+            .campo("Outros encargos", formatarMoeda(c.valorMulta ?: BigDecimal.ZERO))
+            .campo("Valor do desconto", formatarMoeda(c.valorDesconto ?: BigDecimal.ZERO))
+            .campo("Valor total pago", formatarMoeda(c.valorPagamento))
+            .campo("Situacao", situacao ?: "-")
+            .divisor()
+            .campo("Codigo de barras", codigoBarras)
+            .campo("Linha digitavel", c.linhaDigitavel ?: "-")
+            .divisor()
+            .caixaInfo("Autenticacao: ${c.autenticacao ?: "-"}", CorPdf.CINZA_FUNDO, CorPdf.CINZA_TEXTO)
+
+        c.detalheSituacao?.let { builder.espaco(4.0).subtitulo(it, tamanho = 7) }
+        c.ouvidoria?.let { builder.espaco(4.0).subtitulo(it, tamanho = 7) }
+
+        return builder.gerar()
     }
+
+    // DecimalFormat nao e thread-safe (diferente de DateTimeFormatter) - instancia
+    // nova a cada chamada, custo desprezivel pra um PDF gerado poucas vezes.
+    private fun formatarMoeda(v: BigDecimal?): String =
+        if (v == null) "-" else "R$ ${DecimalFormat("#,##0.00", DecimalFormatSymbols(Locale("pt", "BR"))).format(v)}"
+
+    private fun formatarData(d: LocalDate?): String = d?.format(FORMATO_DATA) ?: "-"
+
+    private fun formatarDataHora(d: LocalDateTime): String = d.format(FORMATO_DATA_HORA)
 
     private fun inserirTsianx(
         chaveArquivo: String,
@@ -112,5 +174,9 @@ class AnexoFinanceiro {
     private companion object {
         const val INSTANCIA_FINANCEIRO = "Financeiro"
         const val RESOURCE_ID_FINANCEIRO = "br.com.sankhya.fin.cad.movimentacaoFinanceira"
+
+        // DateTimeFormatter e imutavel/thread-safe - pode ficar compartilhado.
+        val FORMATO_DATA: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        val FORMATO_DATA_HORA: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy 'as' HH:mm:ss")
     }
 }

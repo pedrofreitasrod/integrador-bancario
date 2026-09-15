@@ -8,6 +8,7 @@ dependencies {
 
     compileOnly 'org.projectlombok:lombok:1.18.24'
     annotationProcessor 'org.projectlombok:lombok:1.18.24'
+    implementation 'commons-fileupload:commons-fileupload:1.2.2'
 
     // Integracao HTTP com bancos: HttpURLConnection (JDK) + Moshi so para o JSON.
     // Ver override em CLAUDE.md — Retrofit/OkHttp NAO sao usados neste projeto.
