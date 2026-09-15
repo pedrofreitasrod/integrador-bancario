@@ -1,5 +1,8 @@
-package br.com.hero1.integradorbancario.integracao
+package br.com.hero1.integradorbancario.action
 
+import br.com.hero1.integradorbancario.integracao.IntegracaoBancaria
+import br.com.hero1.integradorbancario.integracao.IntegracaoBancariaException
+import br.com.hero1.integradorbancario.integracao.LogHelper
 import br.com.sankhya.extensions.actionbutton.AcaoRotinaJava
 import br.com.sankhya.extensions.actionbutton.ContextoAcao
 import br.com.sankhya.studio.annotations.hooks.ActionButton

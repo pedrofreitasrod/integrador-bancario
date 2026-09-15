@@ -1,12 +1,14 @@
-package br.com.hero1.integradorbancario.integracao
+package br.com.hero1.integradorbancario.job
 
+import br.com.hero1.integradorbancario.integracao.IntegracaoBancaria
+import br.com.hero1.integradorbancario.integracao.LogHelper
+import br.com.sankhya.jape.core.JapeSession
+import br.com.sankhya.jape.core.JapeSession.SessionHandle
 import br.com.sankhya.modelcore.util.MGECoreParameter
 import br.com.sankhya.studio.annotations.Job
 import br.com.sankhya.studio.annotations.enums.EJBTransactionType
 import br.com.sankhya.studio.stereotypes.IJob
 import java.time.LocalDate
-import java.util.logging.Level
-import java.util.logging.Logger
 
 /**
  * Busca DDA de todas as credenciais ativas a cada 30 minutos.
@@ -27,21 +29,29 @@ import java.util.logging.Logger
 class BuscarDdaJob : IJob() {
 
     override fun onSchedule() {
-        if (!jobAtivo()) {
-            log.info("Job de DDA desligado pelo parametro $PARAM_BYPASS - execucao ignorada.")
-            return
-        }
-
-        val inicio = LocalDate.now()
-        val fim = inicio.plusDays(DIAS_JANELA)
-
+        var hnd:SessionHandle?=null
         try {
+            hnd = JapeSession.open()
+            if (!jobAtivo()) {
+                LogHelper().info("Job de DDA desligado pelo parametro $PARAM_BYPASS - execucao ignorada.", ORIGEM)
+                return
+            }
+
+            val inicio = LocalDate.now()
+            val fim = inicio.plusDays(DIAS_JANELA)
+
             val resultados = IntegracaoBancaria.buscarDdaService.buscarTodasAtivas(inicio, fim)
             val novos = resultados.sumOf { it.quantidadeGravada }
             val falhas = resultados.count { !it.sucesso }
-            log.info("Job de DDA: ${resultados.size} credenciais, $novos registros novos, $falhas falha(s).")
+            LogHelper().info(
+                "Job de DDA: ${resultados.size} credenciais, $novos registros novos, $falhas falha(s).",
+                ORIGEM,
+            )
+
         } catch (e: Exception) {
-            log.log(Level.SEVERE, "Job de DDA: falha geral: ${e.message}", e)
+            LogHelper().registrarAsync(LogHelper.Status.ERROR, "Job de DDA: falha geral", e, ORIGEM)
+        }finally {
+            JapeSession.close(hnd)
         }
     }
 
@@ -54,7 +64,7 @@ class BuscarDdaJob : IJob() {
         }
 
     private companion object {
-        val log: Logger = Logger.getLogger(BuscarDdaJob::class.java.name)
+        const val ORIGEM = "BuscarDdaJob"
         const val PARAM_BYPASS = "br.com.parameter.heroone.integrador"
         const val DIAS_JANELA = 30L
     }
